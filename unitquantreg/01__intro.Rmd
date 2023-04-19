@@ -1,0 +1,87 @@
+---
+title: "Introduction"
+---
+
+---
+class: center, middle, inverse
+# Introduction
+
+---
+# Initial motivation
+
+- From a statistical viewpoint, several real-world problems can be seen
+as extensions of the linear regression model.
+
+<blockquote>
+Just as the mean gives an incomplete picture of a single distribution, so the
+regression curve gives a correspondingly incomplete picture for a set of
+distributions.
+.right[-- <cite>`r Citet(myBib, "Mosteller1977")`</cite>]
+</blockquote>
+
+--
+- How can we go beyond the linear regression model? **Quantile regression**
+
+
+---
+# Water supply
+
+<!-- https://water.org/our-impact/where-we-work/brazil/ -->
+
+- Brazil has always been considered a country rich in water.
+
+- About $12\%$ of the world's surface water resources are located in Brazil.
+
+- However, there are still deep inequalities in access to water and sanitation
+among Brazil regions.
+
+- Of the total population of 212 million people, around 14% or 30 million people **do not have** access to safe source of water. 
+
+- 109 million people (51%) lack access to safely managed household sanitation facilities.
+
+---
+# Water supply
+
+> Study the association between proportion of households with piped water supply and some socio-demographic variables from cities the $3457$ of Northeast and Southeast of Brazil.
+
+
+--
+- Response variable: proportion of households with piped water supply, `phpws`.
+
+- Socio demographic covariates:
+  - `mhdi`: municipal human development index.
+  - `incpc`: income per capita.
+  - `region`: 0 for Southeast, 1 for Northeast.
+  - `pop`: total population.
+
+
+
+> Understanding the impact of socio-demographic covariates on cities with varying levels of water supply accessibility requires modeling the quantiles of `phpws`.
+
+---
+# Water supply
+
+```{r data-descr}
+data(water)
+# head(water)
+water$std__incpc <- (water$incpc - mean(water$incpc)) / sd(water$incpc)
+water$fct_region <- ifelse(water$region == 1, "Northeast", "Southeast")
+
+p_hist <- ggplot(water, aes(x = phpws, fill = fct_region, col = fct_region)) +
+  geom_density(alpha = 0.4) +
+  geom_rug() +
+  labs(x = "phpws", y = "Density", col = "", fill = "")
+p_1 <- ggplot(water, aes(x = mhdi, y = phpws, col = fct_region)) +
+  geom_point(show.legend = FALSE, alpha = 0.3) +
+  labs(x = "MHDI")
+p_2 <- ggplot(water, aes(x = std__incpc, y = phpws, col = fct_region)) +
+  geom_point(show.legend = FALSE, alpha = 0.3) +
+  labs(x = "Income per capita")
+p_3 <- ggplot(water, aes(x = log(pop), y = phpws, col = fct_region)) +
+  geom_point(show.legend = FALSE, alpha = 0.3) +
+  labs(x = "log(population)")
+p_hist / (p_1 | p_2 | p_3)
+```
+
+
+

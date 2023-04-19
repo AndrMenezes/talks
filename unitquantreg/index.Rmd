@@ -1,0 +1,126 @@
+---
+title: "Quantile Regression"
+author: "André F. B. Menezes"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  xaringan::moon_reader:
+    css: ["default", "config/sydney.css", "config/sydney-fonts.css"]
+    self_contained: FALSE
+    nature:
+      ratio: "16:9" # alternatives '16:9' or '4:3' or others e.g. 13:9
+      highlightStyle: github
+      highlightLines: TRUE
+      highlightLanguage: ["r"]
+      countIncrementalSlides: FALSE
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+source("./config/setup_knitr.R")
+xaringanExtra::use_xaringan_extra("tachyons")
+library(RefManageR)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = TRUE,
+           dashed = TRUE)
+myBib <- ReadBib("./config/references.bib", check = FALSE)
+
+library(cowplot)
+library(ggplot2)
+library(patchwork)
+library(unitquantreg)
+theme_set(
+  theme_cowplot(font_size = 14, font_family = "Palatino") +
+    background_grid() +
+    theme(text = element_text(size = 14, family = "Palatino"),
+          legend.position = "top")
+)
+```
+
+
+
+# Outline
+
+- Introduction
+
+- Quantile regression
+
+- Quantile regression for bounded responses
+
+- The `unitquantreg` R package
+
+- Final comments
+
+```{r 01-intro, child="01__intro.Rmd"}
+```
+
+```{r 02-quantile-regression, child="02__quantile_regression.Rmd"}
+```
+
+```{r 03-quantile-regression-bounded, child="03__quantile_regression_bounded.Rmd"}
+```
+
+```{r 04-unitquantreg, child="04__unitquantreg_package.Rmd"}
+```
+
+---
+class: center, middle, inverse
+# Final comments
+
+---
+# Final comments
+
+- Quantile regression is a powerful tool for data analysis because:
+  1. It provides a complete view of the conditional distribution on the effects of covariates.
+  2. It is robust to response outliers.
+
+--
+- The `unitquantreg` R package provides a fully parametric approach for modelling bounded responses variables using quantile regression.
+
+--
+- **Extension**: Dynamic Quantile Linear Model
+
+\begin{eqnarray}
+(Y_t \mid \boldsymbol{\theta}_t, \phi, \tau) &\sim& \textrm{LA}(\mathbf{F}_t^\top \boldsymbol{\theta}_t, \phi^{-1/2}, \tau) \\
+(\boldsymbol{\theta}_t \mid \boldsymbol{\theta}_{t-1}) &\sim& \textrm{N}(\mathbf{G}_t \boldsymbol{\theta}_t, \mathbf{W}_t)
+\end{eqnarray}
+
+- `r Citet(myBib, "Goncalves2020")` used MCMC to perform inference.
+
+- `r Citet(myBib, "Barata2022")` explored the mixture representation and proposed a Importance Sampling variational Bayes method.
+
+---
+# References
+```{r refs, results="asis"}
+PrintBibliography(myBib)
+```
+
+---
+class: middle
+background-image: url(config/maynooth.png), url(config/hamilton.png)
+background-size: 200px, 250px
+background-position: 10% 95%, 30% 95%
+font-size: 500px !important
+text-align: left
+vertical-align: middle
+
+# Thanks!
+
+.pull-right[
+
+<a href="andre.berduscomenezes.2023@mumail.ie">
+.black[`r icons::fontawesome("paper-plane")` andre.berduscomenezes.2023@mumail.ie]
+</a>
+
+<a href="http://github.com/andrmenezes">
+.black[`r icons::fontawesome("github")` @AndrMenezes]
+</a>
+
+<a href="https://andrmenezes.github.io/unitquantreg/">
+.black[`r icons::fontawesome("r-project")` unitquantreg]
+</a>
+
+<br>
+]

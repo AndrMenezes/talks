@@ -1,0 +1,144 @@
+---
+title: "Quantile regression"
+---
+
+---
+class: center, middle, inverse
+# Quantile regression
+
+---
+# Quantile: Probabilistic definition
+
+- Let $Y$ be a random variable with distribution function $F_Y(y) = P(Y \leq y)$,
+the $\tau$-quantile of $Y$ is defined by:
+
+$$Q_Y(\tau) = F_Y^{-1}(\tau) = \inf\{y: F(y) \geq \tau\}, \quad \tau \in (0,1)$$
+
+--
+
+```{r example-quantile-cdf, echo=FALSE, fig.width=12, fig.height=5, fig.align='center'}
+set.seed(6969)
+y  <- sort(rlnorm(100, 2, .8))
+Fy <- plnorm(y, 2, 0.8)
+Q_tau <- qlnorm(Fy, 2, .8)
+
+tau   <- 0.6
+y_tau <- min(y[Fy >= tau])
+
+
+par(mfrow = c(1, 2))# mar = c(4, 3, 4, 3))
+plot(y, Fy, type = "l", ylab = "F(y)")
+points(y_tau, tau, pch = 19, col = "red")
+segments(x0 = y_tau, y0 = 0, x1 = y_tau, y1 = tau, col = "red")
+segments(x0 = 0, y0 = tau, x1 = y_tau, y1 = tau, col = "red")
+
+plot(Fy, Q_tau, type = "l", xlab = expression(tau), ylab = expression(Q(tau)))
+points(tau, y_tau, pch = 19, col = "red")
+segments(x1 = tau, y1 = 0, x0 = tau, y0 = y_tau, col = "red")
+segments(x1 = 0, y1 = y_tau, x0 = tau, y0 = y_tau, col = "red")
+```
+
+
+
+---
+# Quantile: Alternative definition
+
+> A quantile can also be defined as a solution to a minimization problem.
+
+--
+
+- Let be $\mu= E\,Y$, then
+
+$$
+\mu = \arg \min_{c} E(Y - c)^2.
+$$
+
+- Let $m$ be a median of $Y$, then
+
+$$
+m = \arg \min_{c} E|Y - c|.
+$$
+
+--
+
+- This result can be generalized for any quantile $\tau \in (0,1)$.
+
+
+---
+# Quantile: Alternative definition
+
+- Consider the **decision theory** problem of predicting the value of the random variable $Y$ by adopting the following **loss function**:
+
+$$
+\rho_\tau(y) = [\tau - I(y < 0)]\,y, \quad \tau \in (0,1)
+$$
+where $I(\cdot)$ denotes the indicator function.
+
+--
+
+- A quantile $q_\tau$ minimizes the expected loss (risk), i.e.,
+
+$$q_\tau = \arg \min_{c} E\left[\rho_\tau(Y - c)\right].$$
+
+---
+# Quantile regression
+
+- `r Citet(myBib, "Koenker1978")` proposed the quantile regression model as
+follows:
+
+$$
+Y_i = \boldsymbol{x}_i^\top \boldsymbol{\beta}(\tau) + u_i
+$$
+
+where $u_i$ are i.i.d random variable with $Q_{\tau}(u_i \mid \boldsymbol{x}_i) = 0$.
+
+--
+
+- They used Linear Programming methods to obtain $\tau$th regression quantile
+coefficients by minimization of the function:
+
+$$\widehat{\boldsymbol{\beta}} = \arg \min_{\boldsymbol{\beta} \in \mathbb{R}^k} \sum_{i=1}^n \rho_\tau (y_i - \boldsymbol{x}_i^\top \boldsymbol{\beta}).$$
+
+--
+
+- Why should we estimate conditional quantiles?
+  - Economic inequality: study what factors are affecting the poor or rich, i.e., lower or upper tail;
+
+  - Educational studies seek to understand groups in different level of performance.
+
+---
+# Bayesian paradigm
+
+- The asymmetric Laplace (AL) distribution is used to introduce the Bayesian paradigm 
+`r Citep(myBib, "Yu2001")`. Its p.d.f is given by
+
+$$f(y \mid \mu, \sigma, \tau) = \dfrac{\tau (1 - \tau)}{\sigma}\,\exp\left\{-\rho_\tau\left(\dfrac{y - \mu}{\sigma} \right)\right\}$$
+
+where $\mu \in \mathbb{R}$ is the location parameter corresponding to the
+$\tau$-th quantile, $\tau \in (0,1)$, and e $\sigma>0$ is a scale parameter.
+
+
+--
+
+- In the regression framework we have: $(Y_i \mid \mathbf{x}_i) \sim \textrm{AL}(\mu_i, \sigma; \tau)$.
+
+- Assuming that $\mu_i = \boldsymbol{x}_i^\top \boldsymbol{\beta}(\tau)$ for a given 
+quantile $\tau \in (0,1)$.
+
+
+---
+# Bayesian paradigm
+
+- `r Citet(myBib, "Kozumi2011")` proposed the following a mixture representation of AL
+distribution:
+
+\begin{eqnarray}
+(Y \mid \nu) &\sim& N(\mu + \theta\,\nu, \varphi^2\,\sigma\,\nu) \\
+\nu &\sim& \mathrm{Exp}(\sigma)
+\end{eqnarray}
+
+where $\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}$ e $\varphi^2=\dfrac{2}{\tau (1 - \tau)}$.
+
+- The marginal distribution of $Y$ is $\textrm{AL}(\mu, \sigma; \tau)$
+
+

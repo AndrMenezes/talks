@@ -1,0 +1,72 @@
+---
+title: "Quantile regression for bounded responses"
+---
+
+---
+class: center, middle, inverse
+# Quantile regression for bounded responses
+
+---
+# Model specification
+
+- Let $Y_i$ be the response variable such that $Y_i \in (0, 1)$.
+
+- Let $\mathbf{x}_i = (1, x_{i1}, \ldots, x_{ip})^\top$ be the observed 
+values of covariate vector.
+
+- The quantile regression model for bounded data is specified by
+
+$$(Y_i \mid \mathbf{x}_i) \sim \mathcal{F}[\mu_i, \phi; \tau], \quad
+\textrm{with} \quad \mu_i = g^{-1}\left(\mathbf{x}_i^\top\boldsymbol{\beta}_\tau\right)$$
+
+- $\mathcal{F}$ denotes some appropriate family of distribution with bounded support.
+- $\mu_i$ is the location parameter corresponding to the $\tau$ quantile.
+- $\phi$ is scale/shape parameter.
+- $g(\cdot)$ is an appropriate link function that maps $\mu_i \in (0, 1)$ to the real line. Common choices are: `logit`, `probit` and `cauchit`.
+
+- A full up-to-date overview of parametric quantile regression is presented in `r Citet(myBib, "Mazucheli2022")`.
+
+---
+# Families of distributions on $(0, 1)$
+
+- One simple technique that has been used to introduce new probability distributions on the unit interval is the transformation of random variables.
+
+--
+
+- For instance, `r Citet(myBib, "Mazucheli2020")` introduced the following distribution. If $X \sim \textrm{Weibull}(\alpha, \phi)$, then 
+$$Y = \textrm{e}^{-X} \sim \textrm{unit-Weibull}(\alpha, \phi)$$
+where its c.d.f. is given by
+
+$$
+F_Y(y \mid \alpha, \phi) = \exp\left[-\alpha(-\log y)^{\phi} \right], \quad y \in (0,1).
+$$
+
+- So, the quantile function is
+
+$$
+Q_Y(\tau \mid \alpha, \phi) = \exp\left[-\left(-\dfrac{\log \tau}{\alpha}\right)^{1/\phi} \right], \quad \tau \in (0, 1).
+$$
+
+---
+# Parametrization
+
+<!-- In order to introduce the unit-Weibull quantile regression we need propose a  -->
+
+- Parametrization in terms of the $\tau$-th quantile, say
+$\mu = Q_Y(\tau \mid \alpha, \phi)$, such that $\alpha$ can be written as
+
+$$
+\alpha = h^{-1}(\mu) = -\dfrac{\log \tau}{(-\log \mu)^\phi}.
+$$
+
+- For a fixed and known value of $\tau$, the parameter $\mu$ is the $\tau$-th quantile of $Y$.
+
+```{r pdf-uweibull, fig.width=5.8, fig.height=2.4}
+x <- seq(0.000001, 0.999999, l = 100)
+data_uweibull <- expand.grid(x = x, mu = c(0.3, 0.5, 0.7))
+data_uweibull$pdf <- duweibull(x = data_uweibull$x, mu = data_uweibull$mu,
+                               theta = 1.5, tau = 0.5)
+ggplot(data_uweibull, aes(x = x, y = pdf, col = factor(mu))) +
+  geom_line(size = 0.6) +
+  labs(x = "y", y = "pdf", col = expression(mu)) 
+```
