@@ -1,0 +1,477 @@
+---
+title: "Detection of Structural Change in Dynamic Linear Models:"
+date: "October 05, 2022 <br> Maynooth, TSE seminar"
+subtitle: "The `pybats-detection` package"
+author:
+- "[André F. B. Menezes](https://andrmenezes.github.io/) <br> Maynooth University"
+- "Joint work with [Eduardo G. Pinheiro](https://www.linkedin.com/in/eduardo-gabriel-433332142/) and [Hélio S. Migon](https://scholar.google.com/citations?user=Ba2o_wYAAAAJ&hl=en)"
+format:
+  revealjs:
+    theme: default
+    slide-number: true
+    chalkboard:
+      buttons: false
+    footer: "[andrmenezes.github.io](https://andrmenezes.github.io/)"
+    header-includes: |
+      <link rel="stylesheet" href="fontawesome.min.css">
+      <script defer src="all.min.js"></script>
+title-slide-attributes:
+    data-background-size: contain
+engine: knitr
+---
+
+```{r R-setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  dev = "svg",
+  fig.align = "center",
+  prompt = TRUE,
+  tidy = TRUE)
+library(reticulate)
+use_virtualenv("pybats_detection")
+library(dplyr)
+library(cowplot)
+library(ggplot2)
+theme_set(
+  theme_cowplot(font_size = 20, font_family = "Palatino") +
+    background_grid() +
+    theme(text = element_text(size = 20, family = "Palatino"),
+          legend.position = "top")
+)
+
+blue <- rgb(32, 114, 184, maxColorValue = 255)
+red <- rgb(237,0,0, maxColorValue = 255)
+```
+
+## Today's plan
+
+1. Introduction
+2. Bayesian Dynamic Linear Models
+3. Automatic Monitoring
+4. The `pybats-detection` package
+5. Example
+
+```{css, echo=FALSE}
+.title {
+  font-size: 70px !important;
+}
+
+.author {
+  font-size: 30px;
+}
+
+.date {
+  font-size: 20px;
+}
+```
+
+## Take-away message
+
+* `pybats-detection` is a Python package developed for Bayesian **monitoring**
+and **intervention** in univariate time series data.
+
+<ul >
+    <li><i class="fa-solid fa-bullseye"></i>
+    Developed by [André Menezes](https://andrmenezes.github.io/) and
+[Eduardo Gabriel](https://www.linkedin.com/in/eduardo-gabriel-433332142/)
+while working for [Murabei Data Science](https://www.murabei.com/)
+and being advised by professor [Hélio Migon](https://scholar.google.com/citations?user=Ba2o_wYAAAAJ&hl=en).</li>
+    <li><i class="fa-brands fa-github"></i>[github.com/Murabei-OpenSource-Codes/pybats-detection](https://github.com/Murabei-OpenSource-Codes/pybats-detection). </li>
+</ul>
+
+# [Introduction]{.story}{background-color="#000000"}
+
+## Background
+
+::: {.incremental}
+* [Harrison and Stevens (1976)](https://www.jstor.org/stable/2984970) introduced
+the Bayesian Dynamic Linear Model (DLM).
+
+* Theoretical developments were consolidated in an excellent book by
+[West and Harrison (1997)](https://link.springer.com/book/10.1007/b98971).
+
+* Two major works are:
+  - [West and Harisson (1986)](https://www.tandfonline.com/doi/abs/10.1080/01621459.1986.10478331):
+  Automatic monitoring, and adaptation in the class of DLMs.
+  
+  - [ West and Harisson (1989)](https://onlinelibrary.wiley.com/doi/abs/10.1002/for.3980080104):
+  Bayesian subjective intervention.
+:::
+
+## What is a structural change?
+
+- When the time series abruptly changes at a point in time.
+
+- This could happen because of changes in the location, scale or other
+parameters of the process.
+
+```{r simulate-data, fig.width=18}
+set.seed(6966)
+y_loc <- c(
+  rnorm(40, mean = 100, sd = 0.3),
+  rnorm(30, mean = 104, sd = 0.3),
+  rnorm(30, mean = 98, sd = 0.2))
+y_scale <- c(
+  rnorm(40, mean = 100, sd = 1),
+  rnorm(30, mean = 100, sd = 2),
+  rnorm(30, mean = 100, sd = 2.5))
+
+data_f <- data.frame(y = c(y_loc, y_scale),
+  t = rep(seq_len(100), 2),
+  change = rep(c("location", "scale"), each = 100))
+ggplot(data = data_f, aes(x = t, y = y)) +
+  facet_wrap(~change, scales = "free") +
+  geom_point(size = 3) +
+  geom_vline(xintercept = c(40, 70), col = "red", linetype = "dashed", size = 1.2) +
+  scale_y_continuous(breaks = scales::pretty_breaks(6)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(6))
+# write.csv(x = data_f, file = "simulated_data.csv")
+```
+
+- In such cases the model should be modified and adapted.
+
+## Structural change in ecological data
+
+::: {.incremental}
+* [Analyses of structural changes in ecological time series (ASCETS)](https://www.sciencedirect.com/science/article/pii/S1470160X20304064#m0025) by Östman et al. (2020)
+
+* Study of ecological indicators over time such as:
+  - species abundances;
+  - reproduction success;
+  - species density or biomass 
+
+* Detecting structural change in ecological time series and adapting is fundamental 
+to improve future **forecasts** as well as for **inference** purposes. 
+:::
+
+
+# [Bayesian Dynamic Linear Model]{.story}{background-color="#000000"}
+
+## Overview
+
+- Dynamic Linear Models (DLMs) are a natural extension of linear (regression)
+models.
+
+- Go further to the well-known Kalman filter.
+
+- Based on Bayes' theorem.
+
+- Takes into account the sequential nature of the data.
+
+## Definition
+
+- A DLM is defined by the following observation and evolution equations:
+
+\begin{eqnarray}
+Y_t &=& \mathbf{F}_t^\top\,\boldsymbol{\theta}_t + \nu_t, \qquad \nu_t \sim N[0, V_t] \label{eq:dlm_observation} \\ \label{eq:dlm_state_evolution} 
+\boldsymbol{\theta}_t &=& \mathbf{G}_t\,\boldsymbol{\theta}_{t-1} + \boldsymbol{\omega}_t, \quad \boldsymbol{\omega}_t \sim N[\mathbf{0}, \mathbf{W}_t]
+\end{eqnarray}
+
+- $\boldsymbol{\theta}_t$ is the $p \times 1$ state vector of model coefficients at
+time $t$.
+- $\mathbf{F}_t$ is a $p$-dimensional vector of known constant or regressors at
+time $t$.
+
+## Definition
+
+- $\mathbf{G}_t$ is a known $p \times p$ matrix, referred as state evolution
+matrix at time $t$.
+
+- $V_t$ is the observation variance.
+
+- $\mathbf{W}_t$ is the state evolution variance-covariance matrix.
+
+- The quadruple $\{ \mathbf{F}, \mathbf{G}, V, \mathbf{W}\}_t$
+describes the class of DLMs.
+
+## A particular DLM
+
+- A very useful model in the class of DLM is the linear growth or second-order
+polynomial model. 
+
+- Let be $\mathbf{F}_t = (1, 0)^ \top$ and $\mathbf{G}_t = \left( \begin{matrix} 1 &1 \\ 0 & 1 \end{matrix}\right)$ we obtain the linear growth model:
+\begin{eqnarray}
+y_t &=& \mu_t + \nu_t \\
+\mu_t &=& \mu_{t-1} + \beta_t + \delta\mu_t \\
+\beta_t &=& \beta_{t-1} + \delta\beta_t 
+\end{eqnarray}
+
+- Suitable for medium-term forecasts in time series with trend patterns.
+
+## Inference Aspects
+
+- The two main stages involved in the sequential inference are: (i) _evolution_ and (ii) _updating_ 
+
+![](./figures/tikz_dlm_distributions.png)
+
+- Further details can be found in [West and Harrison (1997)](https://link.springer.com/book/10.1007/b98971)
+
+# [Automatic Monitoring]{.story}{background-color="#000000"}
+
+## Steps
+
+::: {.incremental}
+1. Define the local Bayes factor, ${B_t(k)}$;
+
+2. Create an alternative DLM ($M_1$) describing a level or scale shift; and
+
+3. Define the subjective and automatic interventions.
+
+* The method assesses the model's performance based on purely statistical
+measures.
+:::
+
+## Local Bayes factor
+
+The local Bayes factor is defined as
+
+$$B_t(M_0, M_1) = \dfrac{p(y_t \mid M_0)}{p(y_t \mid M_1)}$$
+where $p(y_t \mid M_i)$ is the predictive density distribution and $M_0$ and
+$M_1$ denote the current and alternative models, respectively.
+
+## Local Bayes factor
+
+At time $t$, the monitor will be based on the most recent $k$ observations,
+which are defined as:
+$B_t(k)=\frac{p(y_t,\ldots, y_{t-k+1} \mid M_0)}{p(y_t,\ldots, y_{t-k+1} \mid M_1)}$.
+Two other important quantities are cumulative Bayes factor and the run-length:
+\begin{eqnarray*}
+L_t&=& B_t \, \min_{1 \le k \le t}\{1, L_{t-1}\}\\ 
+l_t&=& 1+ l_{t-1}\,\times \, I_{(-\infty,1)}(L_{t-1})
+\end{eqnarray*}
+where $B_t=B_t(0)$.
+
+
+## Standardised forecasts errors
+
+Evaluating the model consistency of $y_t$ is equivalent to evaluating for the
+one-step-ahead standardized forecasting error ($e_t$) distribution which is
+$$
+e_t \sim N[0, 1]
+$$
+and so
+$$
+p(e_t \mid M_0) \propto \exp\left\{-0.5 e^2_t \right\}
+$$
+
+
+## Alternative model for location
+
+A natural alternative model, $M_1$, assumed that $e_t$ has a non-zero mean $h$,
+which has p.d.f.
+$$
+p(e_t \mid M_1) \propto \exp\left\{-0.5 (e_t - h)^2\right\}
+$$
+
+Thus, the local Bayes factor at time $t$ is given by:
+$$
+B_t = \exp\left\{-0.5 (h^2 - 2 h e_t)\right\}
+$$
+
+## Alternative model for location
+
+The sensitivity of the monitor depends on:
+
+1. A threshold $\tau$ below which the predictive error must be incompatible
+with the current DLM, $M_0$;
+2. The shift mean value, $h$ for the alternative model, $M_1$; 
+3. $l_{max}$, the maximum number of terms to be considered in $B_t(k)$.
+
+
+- Recommended values are $l_{max} = 3, h = 4$ and $\tau = 0.135$, since these
+values lead to indifference between $M_0$ and $M_1$ when $e_t$ is near to $2.0$.
+
+## Alternative model for location
+
+![](./figures/comparing_distribution.png){fig-align="center"}
+
+## Automatic adaptation
+
+- After the detection of an onset of change or _outliers_ adaptation by increasing
+parameter uncertainties is incorporated in the model.
+
+![](./figures/monitor_schema.png){fig-align="center"}
+
+
+# [`pybats-detection`]{.story}{background-color="#000000"}
+
+## Package Overview
+
+- `pybats-detection` is built under Object Oriented Programming using Python
+classes
+
+- The three main classes of `pybats-detection` are: `Smoothing`, `Intervention`,
+and `Monitoring`.
+
+- The classes depends on the `pybats.dglm.dlm` object from the `PyBATS`
+package [(Lavine and Cron, 2021)](https://lavinei.github.io/pybats/). A DLM
+can be initialized in `PyBATS` as follows:
+
+```{python define-dlm-obj, eval=FALSE, echo=TRUE}
+from pybats.dglm import dlm
+dlm_obj = dlm(a0=None, R0=None, nregn=0, ntrend=0, 
+              seasPeriods=[], seasHarmComponents=[], 
+              deltrend=1, delregn=1, delseas=1,
+              **kwargs)
+```
+
+
+## The `Monitoring` class
+
+An instance of the `Monitoring` class can be initialized as follows:
+
+```{python monitor-obj, eval=FALSE, echo=TRUE}
+from pybats_detection.monitor import Monitoring
+monitoring_learning = Monitoring(
+    mod: pybats.dglm.dlm, prior_length: int = 10, 
+    bilateral: bool = False, smooth: bool = True, 
+    interval: bool = True, level: float = 0.05)
+```
+
+The fit method of `Monitoring` performs the automatic monitoring.
+
+```{python monitor-fit, eval=FALSE, echo=TRUE}
+monitoring_res = monitoring_learning.fit(
+     y: pandas.Series, X: pandas.DataFrame = None,
+     h: int = 4, tau: float = 0.135,
+     discount_factors: dict = {
+        "trend": 0.10, "seasonal": 0.90, "reg": 0.98},
+     distr: str = "normal", type: str = "location", 
+     verbose: bool = True)
+```
+
+## Vignettes 
+
+- Further details can be found in package vignettes available at:
+
+  - [quick_start](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/quick_start.pdf):
+  quick reference guide with step-by-step examples.
+  
+  - [pybats_detection](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/pybats_detection.pdf):
+  detailed explanation about usability.
+
+# [Example]{.story}{background-color="#000000"}
+
+## Simulated data
+
+- The data is simulated from a Normal generating process $N[\mu, \sigma^2]$ 
+with $\sigma^2 = 0.5^2$ 
+
+- And $\mu = (100, 104, 98)$ for the first $40$ observations, the following
+$30$, and the last $30$, respectively.
+
+```{r plot-data}
+ggplot(data = data_f[data_f$change == "location", ], aes(x = t, y = y)) +
+  geom_point(size = 2.5) +
+  geom_vline(xintercept = c(40, 70), col = "red", linetype = "dashed",
+             size = 1.2) +
+  scale_y_continuous(breaks = scales::pretty_breaks(6)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(6))
+```
+
+## The model
+
+A level DLM is used to described the data. The model is given by:
+\begin{eqnarray}
+Y_t &=& \mu_t + \nu_t, \qquad \nu_t \sim N[0, V_t] \label{eq:level_dlm} \\ \nonumber
+\mu_t &=& \mu_{t-1} + \omega_t, \quad \omega_t \sim N[0, W_t]
+\end{eqnarray}
+where the evolution $\omega_t$ represents the stochastic change in level between
+times $t - 1$ and $t$.
+
+- This model has $\mathbf{F}_t = \mathbf{G}_t = 1$.
+
+
+## Using `Monitoring` class
+
+```{python perform-monitoring, eval=FALSE, echo=TRUE}
+#| code-fold: true
+a = np.array([100])
+R = np.eye(1)
+R[[0]] = 100
+mod = dlm(a, R, ntrend=1, deltrend=0.90)
+monitor = Monitoring(mod=mod)
+monitor_results = monitor.fit(
+    y=data_location["y"], h=4, tau=0.135,
+    discount_factors={"trend": [0.10]},
+    distr_type="location", bilateral=True, prior_length=4)
+```
+
+```
+Upper potential outlier detected at time 41 with H=2.581e-16, L=2.581e-16 and l=1
+Upper potential outlier detected at time 42 with H=2.477e-13, L=2.477e-13 and l=1
+Upper potential outlier detected at time 43 with H=6.881e-05, L=6.881e-05 and l=1
+Lower potential outlier detected at time 71 with H=1.438e-26, L=1.438e-26 and l=1
+Lower potential outlier detected at time 72 with H=2.959e-21, L=2.959e-21 and l=1
+Lower potential outlier detected at time 73 with H=7.951e-08, L=7.951e-08 and l=1
+```
+
+## Graphical comparison
+
+```{r graph-comparison}
+#| fig-cap: "One-step-ahead forecasts with 95% credible interval."
+data_results <- read.csv("./data/location_simulated_data__results.csv")
+with_detection <- data_results |> 
+  filter(with_monitor == "True", what_detected != "nothing") |> 
+  pull(t)
+
+data_results <- data_results |> 
+  mutate(monitor = with_monitor == "True",
+         which_shape = what_detected != "nothing" & what_detected != "",
+         which_shape =  t %in% with_detection)
+
+ggplot(data = filter(data_results, t > 5), aes(x = t, y = y)) +
+  geom_point(data = filter(data_results, t > 5, monitor),
+             aes(shape = which_shape), size = 1.3,  show.legend = FALSE) +
+  geom_line(aes(y = f, col = with_monitor), show.legend = FALSE, size = 1) +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = with_monitor),
+               alpha = 0.2) +
+  scale_shape_manual(values = c(19, 4)) + 
+  geom_vline(xintercept = c(40, 70), col = "red", linetype = "dashed",
+             size = 1.2) +
+  scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(6)) +
+  labs(col = "With monitoring?", fill = "With monitoring?")
+```
+
+# [Concluding remarks]{.story}{background-color="#000000"}
+
+
+## Concluding remarks
+
+- `pybats-detection` provides methods for identifying structural changes and
+_outliers_ in Bayesian Dynamic Linear Models.
+
+- The methodology is scalable and efficient for analysing real time series data.
+
+- To extend the intervention and monitoring for other class of models, such as
+**transfer functions**, **DGLM** and **DGEGM**.
+
+
+# [References]{.story}{background-color="#000000"}
+
+---
+
+- Harrison, P.J., Stevens, C.F., 1976. Bayesian forecasting. Journal of the Royal
+Statistical Society. Series B (Methodological) 38, 205–247. doi:https://
+doi.org/10.1111/j.2517-6161.1976.tb01586.x.
+
+- Lavine, I., Cron, A., 2021. PyBATS: Bayesian time series modeling and fore-
+casting. URL: https://lavinei.github.io/pybats/. python package version
+0.0.5.
+
+- West, M., Harrison, J., 1989. Subjective intervention in formal models. Journal
+of Forecasting 8, 33--53. doi:10.1002/for.3980080104.
+
+
+---
+- West, M., Harrison, P.J., 1986. Monitoring and adaptation in Bayesian fore-
+casting models. Journal of the American Statistical Association 81, 741–750.
+doi:10.1080/01621459.1986.10478331.
+
+- West, M., Harrison, P.J., 1997. Bayesian Forecasting and Dynamic Models.
+2nd ed., Springer, New York.
+
+# [Thank you!]{.story}{background-color="#000000"}

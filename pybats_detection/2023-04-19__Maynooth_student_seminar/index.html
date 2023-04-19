@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Bayesian Automatic Sequential Monitoring</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="André F. B. Menezes" />
+    <meta name="date" content="2023-04-19" />
+    <script src="index_files/header-attrs-2.17/header-attrs.js"></script>
+    <link href="index_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="index_files/tachyons-4.12.0/tachyons.min.css" rel="stylesheet" />
+    <script src="index_files/kePrint-0.0.1/kePrint.js"></script>
+    <link href="index_files/lightable-0.0.1/lightable.css" rel="stylesheet" />
+    <link rel="stylesheet" href="config/sydney.css" type="text/css" />
+    <link rel="stylesheet" href="config/sydney-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Bayesian Automatic Sequential Monitoring
+]
+.author[
+### André F. B. Menezes
+]
+.date[
+### April 19, 2023
+]
+
+---
+
+
+
+
+
+
+
+
+
+# Outline
+
+- Introduction
+
+- Bayesian Dynamic Linear Model
+
+- Automatic Sequential Monitoring
+
+- The `pybats-detection` package
+
+- Examples
+
+---
+# Introduction
+
+- **Model:** any descriptive and explanatory scheme that organised information
+and experience.
+
+--
+- **Why modelling?** provide efficient learning processes, which will increase 
+understanding and enable wise decision.
+
+--
+- **Forecasts** may result in sizeable forecast errors, which trigger the
+routine learning process.
+
+--
+- **Desirable properties**: changes do not occur too frequently or drastically.
+
+--
+- **_Management by Exception_:** information is process routinely and inferences
+are made, unless exception circumstances arises:
+  1. Expert information anticipate future major changes.
+  2. Performance monitoring identifies deficiencies and prompt some kind of
+  intervention.
+
+--
+- **Presentation scope:** second type of exception, more precisely automatic
+procedure designed to correct specified types of changes.
+
+---
+# Introduction
+
+- A continual assessment of the performance of any forecasting
+and decision system is crucial to its effective use.
+
+- **Model monitoring** refers to the process of:
+  
+  (i) detecting inadequacies in the current model, such as _outliers_ and **abrupt structural changes**, and
+  
+  (ii) providing prompt automatic intervention.
+
+--
+- Areas of application:
+  - **Industrial**: stock control and product planning.
+  - **Environmental**: air pollution.
+  - **Ecology**: population migration.
+
+--
+ 
+- **Bayesian Forecasting and Dynamic Models:** provide effective model structure
+for sequential automatic monitoring and intervention
+&lt;a name=cite-West1986&gt;&lt;/a&gt;&lt;a name=cite-West1997&gt;&lt;/a&gt;([West and Harrison, 1986](#bib-West1986); [West and Harrison, 1997](#bib-West1997)).
+
+
+
+---
+# Examples: Simulated
+
+- Outlier `\((t=20)\)`, level change `\((t=40)\)` and growth change `\((t=80)\)`.
+
+&lt;img src="figures/sim-data-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+# Examples: Stored energy
+
+- Monthly stored energy, measured in Gigawatt hours (GWh), in the Southeast
+and Midwest regions of Brazil.
+
+&lt;img src="figures/ons-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+
+# Bayesian Dynamic Linear Model
+
+---
+# Definition
+
+Let `\(D_{t-1}\)` be the information set until time `\(t-1\)`, then the DLM is
+defined by 
+
+$$
+`\begin{eqnarray}
+\left(Y_t \mid D_{t-1}, V_t\right) &amp;\sim&amp; \mathrm{N}\left[\mathbf{F}_t^\top\,\boldsymbol{\theta}_t, V_t \right] \\
+\left(\boldsymbol{\theta}_t \mid D_{t-1}, V_t\right) &amp;\sim&amp; \mathrm{N}\left[\mathbf{G}_t\,\boldsymbol{\theta}_{t-1}, V_t\,\mathbf{W}_t\right] \\
+\left(\phi_t \mid D_{t-1} \right) &amp;\sim&amp; \mathrm{Gamma}[\beta n_{t-1} / 2, (1- \beta)\,d_{t-1}/2]
+\end{eqnarray}`
+$$
+- `\(Y_t\)` is a scalar observation at time `\(t\)`;
+- `\(\mathbf{F}_t\)` is a `\(p\times 1\)` regression vector with known constants at time `\(t\)`;
+- `\(\boldsymbol{\theta}_t\)` is a `\(p\times 1\)` state vector at time `\(t\)`;
+- `\(\mathbf{G}_t\)` is a `\(p\times p\)` matrix with known constants describing the state evolution;
+- `\(V_t\)` is the observation variance, `\(\phi_t = 1 / V_t\)` is the precision, and `\(\mathbf{W}_t\)` is the evolution variance matrix.
+&lt;!-- - `\(n_{t-1}\)` and `\(d_{t-1}\)` are, respectively the degrees of freedom and sum of squares parameters of Gamma prior. --&gt;
+
+--
+
+&gt; The variance can change over time due to the discount factor, `\(\beta \in (0, 1]\)`,
+and if it equals one, it results in the constant variance model, `\(V_t = V\)`.
+
+
+
+---
+# Initial information
+
+- The model is completely specified through the initial information.
+
+$$
+`\begin{eqnarray}
+(\boldsymbol{\theta}_{t-1} \mid \phi_{t-1}, D_{t-1}) &amp;\sim&amp; \mathrm{N}[\mathbf{m}_{t-1},   \phi_{t-1}^{-1}\mathbf{C}_{t-1}] \\
+(\phi_{t-1} \mid D_{t-1}) &amp;\sim&amp; \textrm{Gamma}[n_{t-1} / 2, d_{t-1} / 2]
+\end{eqnarray}`
+$$
+where `\(\mathbf{m}_{t-1}\)`, `\(\mathbf{C}_{t-1}\)`, `\(n_{t-1}\)`, and `\(d_{t-1}\)` are
+prior parameters that should be specified.
+
+
+---
+# Sequential inference
+
+- The two main stages involved in the sequential inference are: (i) _evolution_ and (ii) _updating_,
+which is essentially a direct application of Bayes' theorem.
+
+![](./figures/tikz_dlm_distributions.png)
+
+- Unconditional to `\(V_t\)` all the distributions involved follows `\(t\)`-Student
+distribution.
+
+- Further details can be found in [West and Harrison (1997)](#bib-West1997).
+
+---
+# Specification of `\(\mathbf{W_t}\)`
+
+- The system variance `\(\mathbf{W}_t\)` is specified as
+
+`$$\mathbf{W}_t = \dfrac{1-\delta}{\delta}\,\mathbf{C}_{t-1}.$$`
+where `\(\delta \in (0, 1]\)` is a discount factor.
+
+- If `\(\delta \approx 0\)` the elements of `\(\mathbf{W}_{t}\)` will be very large, resulting in an unstable model component.
+
+--
+
+&gt; Model adaptation is carried out by raising the uncertainty of the state parameters when a model breakdown is observed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+
+# Automatic Sequential Monitoring
+
+---
+# In nutshell
+
+It involves the following main steps: 
+
+1. Propose an alternative DLM `\((M_1)\)` describing a level and/or scale shift; 
+
+2. Compute the Bayes factor, `\(H_t\)` and update the cumulative Bayes factor `\(L_t\)` and run-lenght `\(l_t\)`;
+
+3. Check if measures indicates potential model breakdown deviates;
+
+4. If so, performs automatic interventions in order to model adapts itself.
+
+&gt; The method assess the model performance based on purely statistical measures.
+
+---
+# In nutshell
+
+&lt;img src="./figures/monitor_schema.png" width="60%" style="display: block; margin: auto;" /&gt;
+
+---
+# Bayes factor
+
+At time `\(t\)`, the Bayes factor based on the most recent `\(k\)` observations is given by
+
+`$$B_t(k) = H_t\,B_{t-1}(k-1) = \dfrac{p(y_t,\ldots, y_{t-k+1} \mid D_{t-k})}{p_A(y_t,\ldots, y_{t-k+1} \mid D_{t-k})}$$`
+
+where
+
+`$$H_t = \dfrac{p(y_t \mid D_{t-1})}{p_A(y_t \mid D_{t-1})}$$`
+and 
+- `\(p_A(y_t \mid D_t)\)` is the predictive density distribution of the alternative model `\(M_A\)`
+
+
+--
+&gt; Given a suitable alternative model, small values of these Bayes factors
+indicate poor predictive ability, or failure, of the standard model.
+
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+
+# The `pybats-detection` package
+
+---
+# The `pybats-detection` package
+
+- Developed by [André Menezes](https://andrmenezes.github.io/) and [Eduardo Gabriel](https://www.linkedin.com/in/eduardo-gabriel-433332142/) while working at [Murabei Data Science](https://www.murabei.com/) and advised by professor [Helio S. Migon](https://scholar.google.com/citations?user=Ba2o_wYAAAAJ&amp;hl=en).
+
+- `pybats-detection` is built under Object Oriented Programming (OOP) using
+Python classes.
+
+- The three main classes of `pybats-detection` are: `Smoothing`, `Intervention`,
+and `Monitoring`.
+
+--
+- The classes depends on the `pybats.dglm.dlm` object from the `PyBATS`
+package [(Lavine and Cron, 2021)](https://lavinei.github.io/pybats/). A DLM
+can be initialized in `PyBATS` as follows:
+
+
+```python
+from pybats.dglm import dlm
+dlm_obj = dlm(a0=None, R0=None, nregn=0, ntrend=0, 
+              seasPeriods=[], seasHarmComponents=[], 
+              deltrend=1, delregn=1, delseas=1,
+              **kwargs)
+```
+
+---
+# Overview
+
+.pull-left[
+
+### `Monitoring` class
+
+- Initialization
+
+
+```python
+from pybats_detection.monitor import Monitoring
+monitoring_learning = Monitoring(
+    mod: pybats.dglm.dlm, prior_length: int = 10, 
+    bilateral: bool = False, smooth: bool = True, 
+    interval: bool = True, level: float = 0.05)
+```
+
+- Sequential learning
+
+
+```python
+monitoring_res = monitoring_learning.fit(
+     y: pandas.Series, X: pandas.DataFrame = None,
+     h: int = 4, tau: float = 0.135,
+     discount_factors: dict = {
+        "trend": 0.10, "seasonal": 0.90, "reg": 0.98},
+     distr: str = "normal", type: str = "location", 
+     verbose: bool = True)
+```
+]
+
+.pull-right[
+### Vignettes &lt;svg viewBox="0 0 576 512" style="height:1em;position:relative;display:inline-block;top:.1em;" xmlns="http://www.w3.org/2000/svg"&gt;  &lt;path d="M528.3 46.5H388.5c-48.1 0-89.9 33.3-100.4 80.3-10.6-47-52.3-80.3-100.4-80.3H48c-26.5 0-48 21.5-48 48v245.8c0 26.5 21.5 48 48 48h89.7c102.2 0 132.7 24.4 147.3 75 .7 2.8 5.2 2.8 6 0 14.7-50.6 45.2-75 147.3-75H528c26.5 0 48-21.5 48-48V94.6c0-26.4-21.3-47.9-47.7-48.1zM242 311.9c0 1.9-1.5 3.5-3.5 3.5H78.2c-1.9 0-3.5-1.5-3.5-3.5V289c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5v22.9zm0-60.9c0 1.9-1.5 3.5-3.5 3.5H78.2c-1.9 0-3.5-1.5-3.5-3.5v-22.9c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5V251zm0-60.9c0 1.9-1.5 3.5-3.5 3.5H78.2c-1.9 0-3.5-1.5-3.5-3.5v-22.9c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5v22.9zm259.3 121.7c0 1.9-1.5 3.5-3.5 3.5H337.5c-1.9 0-3.5-1.5-3.5-3.5v-22.9c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5v22.9zm0-60.9c0 1.9-1.5 3.5-3.5 3.5H337.5c-1.9 0-3.5-1.5-3.5-3.5V228c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5v22.9zm0-60.9c0 1.9-1.5 3.5-3.5 3.5H337.5c-1.9 0-3.5-1.5-3.5-3.5v-22.8c0-1.9 1.5-3.5 3.5-3.5h160.4c1.9 0 3.5 1.5 3.5 3.5V190z"&gt;&lt;/path&gt;&lt;/svg&gt;
+
+- [quick_start](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/quick_start.pdf): quick reference guide with step-by-step examples.
+  
+- [pybats_detection](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/pybats_detection.pdf): detailed explanation about usability.
+]
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+
+# Examples
+
+---
+# Simulated data
+
+- Level change `\((t=40)\)` and growth change `\((t=80)\)`.
+
+&lt;img src="figures/sim-data-viz-2-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+# The linear growth level model 
+
+The process equations are
+$$
+`\begin{eqnarray}
+Y_t &amp;=&amp; \mu_t + \nu_t, \\
+\mu_t &amp;=&amp; \mu_{t-1} + \beta_{t} + \partial\mu_t, \\ 
+\beta_t &amp;=&amp; \beta_{t-1} + \partial\beta_t
+\end{eqnarray}`
+$$
+where
+
+- `\(\mu_t\)` is the level of the process at time `\(t\)`.
+
+- `\(\beta_t\)` is the incremental growth in the level of the series over time `\(t-1\)` to `\(t\)`.
+
+### Discount factors:
+
+- `\(\delta_T = (0.97, 0.97) \rightarrow \delta^{\prime}_T = (0.10, 0.20)\)`.
+
+---
+# Using the `Monitoring` class
+
+
+```python
+from pybats.dglm import dlm
+from pybats_detection.monitor import Monitoring
+a = np.array([100, 0])
+R = np.eye(2)
+R[0, 0] = 100
+R[1, 1] = 100
+mod = dlm(a, R, ntrend=2, deltrend=0.97)
+monitor = Monitoring(mod=mod)
+monitor_results = monitor.fit(
+    y=r.data_sim["y"],
+    h=4, tau=0.135,
+    discount_factors={"trend": [0.10, 0.20]},
+    distr_type="location",
+    bilateral=True,
+    prior_length=10)
+# Upper potential outlier detected at time 20 with H=7.9005e-15, L=7.9005e-15 and l=1
+# Upper potential outlier detected at time 33 with H=7.0161e-02, L=7.0161e-02 and l=1
+# Lower potential outlier detected at time 41 with H=1.1651e-31, L=1.1651e-31 and l=1
+# Lower potential outlier detected at time 42 with H=1.3444e-15, L=1.3444e-15 and l=1
+# Lower potential outlier detected at time 43 with H=5.5249e-03, L=5.5249e-03 and l=1
+# Upper potential outlier detected at time 48 with H=6.5863e-03, L=6.5863e-03 and l=1
+# Upper potential outlier detected at time 64 with H=1.1022e-01, L=1.1022e-01 and l=1
+# Upper parametric change detected at time 84 with H=3.2405e+00, L=2.5754e-03 and l=4
+# Upper parametric change detected at time 86 with H=4.2482e-01, L=1.1267e-01 and l=2
+# Upper potential outlier detected at time 87 with H=9.0780e-02, L=9.0780e-02 and l=1
+```
+
+
+
+---
+# Predictive
+
+&lt;img src="figures/predictive-simulated-1.svg" width="80%" style="display: block; margin: auto;" /&gt;&lt;table class="table table-striped" style="font-size: 12px; width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+&lt;caption style="font-size: initial !important;"&gt;One-step-ahead forecast metrics&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Monitor &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; MAPE &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; RMSE &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; FALSE &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 3.26 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 4.07 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; TRUE &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.91 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 2.05 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+# Level
+
+&lt;img src="figures/level-simulated-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+# Growth
+
+&lt;img src="figures/growth-simulated-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Stored energy
+
+- Monthly stored energy, measured in Gigawatt hours (GWh), in the Southeast
+and Midwest regions of Brazil.
+
+&lt;img src="figures/stored-energy-viz-1.svg" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+# The linear growth level model with seasonality
+
+To reflect the month seasonality a two Fourier seasonal component of period 
+`\(12\)` is used. The regression vector and the evolution matrix are defined by
+
+`$$\mathbf{F}^\prime_t = (1, 0, 1, 0, 1, 0) \quad \textrm{and} \quad \mathbf{G}_t^{\prime} = \textrm{blockdiag}[\mathbf{G}_{T}, \mathbf{H}_{1}, \mathbf{H}_{2}]$$`
+where `\(\mathbf{G}_{T} = \begin{pmatrix} 1 &amp; 1  \\ 0 &amp; 1  \end{pmatrix}\)` and
+
+`$$\mathbf{H}_j = \begin{pmatrix}  \cos(2\pi j / 12) &amp; \sin(2\pi j / 12) \\ -\sin(2\pi j / 12) &amp; \cos(2\pi j / 12)  \end{pmatrix}, \quad j = 1,2.$$`
+
+### Discount factors:
+- `\(\delta_T = (0.95, 0.95) \rightarrow \delta^{\prime}_T = (0.30, 0.95)\)`.
+
+- `\(\delta_S = 0.98\)`.
+
+
+---
+# Using the `Monitoring` class
+
+
+```python
+a = np.array([data_ons["ear"].values[0:4].mean(), 0, 0, 0, 0, 0])
+R = np.eye(6)
+np.fill_diagonal(R, val=100)
+mod = dlm(a0=a, R0=R, ntrend=2, deltrend=[0.95, 0.95], delseas=0.99,
+          seasPeriods=[12], seasHarmComponents=[[1, 2]])
+monitor = Monitoring(mod=mod)
+fit_monitor = monitor.fit(
+    y=data_ons["ear"], bilateral=True, prior_length=40, h=4, tau=0.135,
+    discount_factors={"trend": [0.30, 0.95], "seasonal": 0.99})
+# Lower parametric change detected at time 49 with H=3.1647e-01, L=2.2301e-04 and l=4
+# Upper parametric change detected at time 55 with H=2.3896e-01, L=6.4362e-03 and l=3
+# Lower parametric change detected at time 64 with H=9.2281e-01, L=2.2543e-01 and l=3
+# Lower parametric change detected at time 81 with H=4.0275e-01, L=8.6456e-02 and l=2
+# Upper potential outlier detected at time 85 with H=3.9858e-06, L=3.9858e-06 and l=1
+# Upper potential outlier detected at time 86 with H=5.0430e-03, L=5.0430e-03 and l=1
+# Lower potential outlier detected at time 96 with H=1.0065e-02, L=1.0065e-02 and l=1
+# Lower potential outlier detected at time 97 with H=3.8101e-03, L=3.8101e-03 and l=1
+# Upper potential outlier detected at time 117 with H=1.0822e-01, L=1.0822e-01 and l=1
+# Upper potential outlier detected at time 118 with H=1.0895e-02, L=1.0895e-02 and l=1
+# Lower potential outlier detected at time 122 with H=4.0880e-02, L=4.0880e-02 and l=1
+# Lower parametric change detected at time 125 with H=2.6272e+00, L=8.5763e-01 and l=3
+# Upper potential outlier detected at time 135 with H=6.5771e-02, L=6.5771e-02 and l=1
+# Upper potential outlier detected at time 136 with H=4.6062e-02, L=4.6062e-02 and l=1
+# Lower potential outlier detected at time 147 with H=9.2156e-02, L=9.2156e-02 and l=1
+# Lower potential outlier detected at time 148 with H=3.8989e-02, L=3.8989e-02 and l=1
+# Lower parametric change detected at time 158 with H=4.7925e-01, L=1.0823e-06 and l=4
+# Upper parametric change detected at time 163 with H=4.1401e-01, L=1.0293e-01 and l=2
+# Lower potential outlier detected at time 169 with H=1.4748e-02, L=1.4748e-02 and l=1
+# Lower potential outlier detected at time 170 with H=3.9006e-06, L=3.9006e-06 and l=1
+# Lower potential outlier detected at time 171 with H=5.1861e-04, L=5.1861e-04 and l=1
+# Lower potential outlier detected at time 181 with H=4.3338e-02, L=4.3338e-02 and l=1
+# Lower potential outlier detected at time 182 with H=1.2543e-02, L=1.2543e-02 and l=1
+# Upper parametric change detected at time 190 with H=4.7133e-01, L=2.4594e-02 and l=3
+# Lower parametric change detected at time 209 with H=2.4010e+00, L=1.6900e-07 and l=5
+# Lower parametric change detected at time 255 with H=5.6707e-01, L=1.6867e-03 and l=5
+# Lower parametric change detected at time 258 with H=5.2204e-01, L=8.5736e-02 and l=3
+# Upper parametric change detected at time 263 with H=1.7622e-01, L=1.1343e-01 and l=2
+```
+
+
+
+
+
+---
+# Predictive
+
+&lt;img src="figures/predictive-ons-2-1.svg" width="80%" style="display: block; margin: auto;" /&gt;&lt;table class="table table-striped" style="font-size: 12px; width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+&lt;caption style="font-size: initial !important;"&gt;One-step-ahead forecast metrics&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Monitor &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; MAPE &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; RMSE &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; FALSE &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.74 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 10972.44 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; TRUE &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 12.32 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 9997.61 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+
+
+---
+class: center, middle, inverse
+
+# Concluding remarks
+
+
+---
+# Concluding remarks
+
+- When real-time estimation is required, Bayesian automatic monitoring is both
+efficient and scalable.
+
+
+--
+- `pybats-detection` provides methods for identifying structural changes and 
+outliers in Bayesian DLMs.
+
+
+--
+- Future versions of the package will include monitoring for other classes of
+dynamic models, such as Dynamic Generalized Linear Models (DGLMs).
+
+
+---
+# References
+&lt;a name=bib-West1986&gt;&lt;/a&gt;[West, M. and P. J. Harrison](#cite-West1986) (1986). "Monitoring and
+Adaptation in Bayesian Forecasting Models". In: _Journal of the American Statistical Association_
+81.395, pp. 741-750. DOI:
+[10.1080/01621459.1986.10478331](https://doi.org/10.1080%2F01621459.1986.10478331).
+
+&lt;a name=bib-West1997&gt;&lt;/a&gt;[West, M. and P. J. Harrison](#cite-West1997) (1997). _Bayesian Forecasting and
+Dynamic Models_. 2nd. New York: Springer.
+
+---
+class: middle
+background-image: url(config/maynooth.png), url(config/hamilton.png)
+background-size: 200px, 250px
+background-position: 10% 95%, 30% 95%
+font-size: 500px !important
+text-align: left
+vertical-align: middle
+
+# Thanks!
+
+.pull-right[
+
+&lt;a href="andre.berduscomenezes.2023@mumail.ie"&gt;
+.black[&lt;svg viewBox="0 0 512 512" style="height:1em;position:relative;display:inline-block;top:.1em;" xmlns="http://www.w3.org/2000/svg"&gt;  &lt;path d="M440 6.5L24 246.4c-34.4 19.9-31.1 70.8 5.7 85.9L144 379.6V464c0 46.4 59.2 65.5 86.6 28.6l43.8-59.1 111.9 46.2c5.9 2.4 12.1 3.6 18.3 3.6 8.2 0 16.3-2.1 23.6-6.2 12.8-7.2 21.6-20 23.9-34.5l59.4-387.2c6.1-40.1-36.9-68.8-71.5-48.9zM192 464v-64.6l36.6 15.1L192 464zm212.6-28.7l-153.8-63.5L391 169.5c10.7-15.5-9.5-33.5-23.7-21.2L155.8 332.6 48 288 464 48l-59.4 387.3z"&gt;&lt;/path&gt;&lt;/svg&gt; andre.berduscomenezes.2023@mumail.ie]
+&lt;/a&gt;
+
+&lt;a href="http://github.com/andrmenezes"&gt;
+.black[&lt;svg viewBox="0 0 496 512" style="height:1em;position:relative;display:inline-block;top:.1em;" xmlns="http://www.w3.org/2000/svg"&gt;  &lt;path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"&gt;&lt;/path&gt;&lt;/svg&gt; @AndrMenezes]
+&lt;/a&gt;
+
+&lt;a href="https://pypi.org/project/pybats-detection/"&gt;
+.black[&lt;svg viewBox="0 0 448 512" style="height:1em;position:relative;display:inline-block;top:.1em;" xmlns="http://www.w3.org/2000/svg"&gt;  &lt;path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6zM286.2 404c11.1 0 20.1 9.1 20.1 20.3 0 11.3-9 20.4-20.1 20.4-11 0-20.1-9.2-20.1-20.4.1-11.3 9.1-20.3 20.1-20.3zM167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4zm-6.7-142.6c-11.1 0-20.1-9.1-20.1-20.3.1-11.3 9-20.4 20.1-20.4 11 0 20.1 9.2 20.1 20.4s-9 20.3-20.1 20.3z"&gt;&lt;/path&gt;&lt;/svg&gt; pybats-detection]
+&lt;/a&gt;
+
+&lt;br&gt;
+]
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "16:9",
+"highlightStyle": "github",
+"highlightLines": true,
+"highlightLanguage": "r",
+"countIncrementalSlides": false,
+"navigation": {
+"scroll": false
+}
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

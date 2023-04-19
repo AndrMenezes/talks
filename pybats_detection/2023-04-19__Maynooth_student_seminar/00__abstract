@@ -1,0 +1,8 @@
+Bayesian Automatic Sequential Monitoring
+
+Continual assessment of the performance of any forecasting and decision-making system is crucial for its effective use. Model monitoring refers to the process of detecting inadequacies in the current model, such as outliers and abrupt structural changes, and providing prompt automatic adaptation. In this talk, I will demonstrate how the Bayesian approach is useful for continual assessment of routine models and providing quick adaptation to unexpected changes in time series data. Finally, I will showcase examples using the Python package pybats-detection, which was specifically designed to implement the discussed ideas and facilitate their use.
+
+One desirable property of forecasting and learning system is that proposed
+model should not change drastically and too frequently. 
+
+

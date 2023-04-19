@@ -1,0 +1,43 @@
+\documentclass[crop,tikz]{standalone}
+\usepackage{color}
+\usepackage{bm}
+
+% Tikz settings optimized for causal graphs.
+\usetikzlibrary{shapes,decorations,arrows,calc,arrows.meta,fit,positioning}
+\tikzset{
+    -Latex,auto,node distance =1 cm and 1 cm, semithick ,
+    state/.style ={ellipse, draw, minimum width = 0.7 cm},
+    point/.style = {circle, draw, inner sep=0.04cm,fill,node contents={}},
+    bidirected/.style={Latex-Latex,dashed},
+    el/.style = {inner sep=2pt, align=left, sloped}
+}
+
+\begin{document}
+
+
+
+\begin{tikzpicture}[node distance=2.0cm and 2.0cm]
+
+% nodes
+
+% $\left(\bm{\theta}_{t-1} \mid D_{t-1}\right) \sim \left[\bm{m}_{t-1}, \bm{C}_{t-1}\right]$
+\node (1) at (1,1)  {};
+\node (2) [right = of 1] {$(\bm{\theta}_{t-1} \mid D_{t-1})$};
+\node (3) [right = of 2] {$(\bm{\theta}_{t} \mid D_{t-1})$};
+\node (4) [below = of 3] {$(Y_{t} \mid D_{t-1})$};
+\node (5) [right = of 3] {$(\bm{\theta}_{t} \mid D_{t})$};
+\node (6) [below = of 5] {$(y_{t} \mid \bm{\theta}_{t})$};
+\node (7) [right = of 5] {};
+
+% edges
+\draw[shorten <= 1cm] (1) -- (2);
+%\path (1) edge (2) [shorten >=5mm];
+\path (2) edge node[above] {Evolution} (3);
+\path (3) edge node[left] {Forecast} (4);
+\path (3) edge node[above] {Update} (5);
+\path (6) edge (5);
+\draw[shorten >= 1cm] (5) -- (7);
+
+\end{tikzpicture}
+	
+\end{document}

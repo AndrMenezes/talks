@@ -1,0 +1,73 @@
+---
+title: "The `pybats-detection` package"
+---
+
+---
+class: center, middle, inverse
+
+# The `pybats-detection` package
+
+---
+# The `pybats-detection` package
+
+- Developed by [André Menezes](https://andrmenezes.github.io/) and [Eduardo Gabriel](https://www.linkedin.com/in/eduardo-gabriel-433332142/) while working at [Murabei Data Science](https://www.murabei.com/) and advised by professor [Helio S. Migon](https://scholar.google.com/citations?user=Ba2o_wYAAAAJ&hl=en).
+
+- `pybats-detection` is built under Object Oriented Programming (OOP) using
+Python classes.
+
+- The three main classes of `pybats-detection` are: `Smoothing`, `Intervention`,
+and `Monitoring`.
+
+--
+- The classes depends on the `pybats.dglm.dlm` object from the `PyBATS`
+package [(Lavine and Cron, 2021)](https://lavinei.github.io/pybats/). A DLM
+can be initialized in `PyBATS` as follows:
+
+```{python, eval=FALSE, echo=TRUE}
+from pybats.dglm import dlm
+dlm_obj = dlm(a0=None, R0=None, nregn=0, ntrend=0, 
+              seasPeriods=[], seasHarmComponents=[], 
+              deltrend=1, delregn=1, delseas=1,
+              **kwargs)
+```
+
+---
+# Overview
+
+.pull-left[
+
+### `Monitoring` class
+
+- Initialization
+
+```{python, eval=FALSE, echo=TRUE}
+from pybats_detection.monitor import Monitoring
+monitoring_learning = Monitoring(
+    mod: pybats.dglm.dlm, prior_length: int = 10, 
+    bilateral: bool = False, smooth: bool = True, 
+    interval: bool = True, level: float = 0.05)
+```
+
+- Sequential learning
+
+```{python, eval=FALSE, echo=TRUE}
+monitoring_res = monitoring_learning.fit(
+     y: pandas.Series, X: pandas.DataFrame = None,
+     h: int = 4, tau: float = 0.135,
+     discount_factors: dict = {
+        "trend": 0.10, "seasonal": 0.90, "reg": 0.98},
+     distr: str = "normal", type: str = "location", 
+     verbose: bool = True)
+```
+]
+
+.pull-right[
+### Vignettes `r icons::fontawesome("readme")`
+
+- [quick_start](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/quick_start.pdf): quick reference guide with step-by-step examples.
+  
+- [pybats_detection](https://raw.githubusercontent.com/Murabei-OpenSource-Codes/pybats-detection/develop/vignettes/pybats_detection.pdf): detailed explanation about usability.
+]
+
+
+

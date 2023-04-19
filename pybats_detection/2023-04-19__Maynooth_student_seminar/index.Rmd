@@ -1,0 +1,235 @@
+---
+title: "Bayesian Automatic Sequential Monitoring"
+author: "André F. B. Menezes"
+date: "April 19, 2023"
+output:
+  xaringan::moon_reader:
+    css: ["default", "config/sydney.css", "config/sydney-fonts.css"]
+    self_contained: FALSE
+    nature:
+      ratio: "16:9" # alternatives '16:9' or '4:3' or others e.g. 13:9
+      highlightStyle: github
+      highlightLines: TRUE
+      highlightLanguage: ["r"]
+      countIncrementalSlides: FALSE
+      navigation:
+        scroll: false # disable slide transitions by scrolling
+---
+
+```{r setup, include=FALSE}
+source("./config/setup_knitr.R")
+xaringanExtra::use_xaringan_extra("tachyons")
+library(RefManageR)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = TRUE,
+           dashed = TRUE)
+myBib <- ReadBib("./config/references.bib", check = FALSE)
+library(cowplot)
+library(ggplot2)
+theme_set(
+  theme_cowplot(font_size = 20, font_family = "Palatino") +
+    background_grid() +
+    theme(text = element_text(size = 20, family = "Palatino"),
+          legend.position = "top")
+)
+
+blue <- rgb(32, 114, 184, maxColorValue = 255)
+red <- rgb(237,0,0, maxColorValue = 255)
+
+library(reticulate)
+use_virtualenv(virtualenv = "~/.envs/2023-04-19__Maynooth_student_seminar",
+               required = TRUE)
+```
+
+```{python load-modules, include=FALSE}
+import numpy as np
+import pandas as pd
+from pybats.dglm import dlm
+from pybats_detection.monitor import Monitoring
+```
+
+```{python stored-energy, include=FALSE}
+data_ons = pd.read_csv("./data/stored_energy.csv")
+data_ons = data_ons[
+    data_ons["time"] < "2022-01-01"].reset_index(drop=True).copy()
+data_ons["t"] = data_ons.index + 1
+```
+
+
+# Outline
+
+- Introduction
+
+- Bayesian Dynamic Linear Model
+
+- Automatic Sequential Monitoring
+
+- The `pybats-detection` package
+
+- Examples
+
+---
+# Introduction
+
+- **Model:** any descriptive and explanatory scheme that organised information
+and experience.
+
+--
+- **Why modelling?** provide efficient learning processes, which will increase 
+understanding and enable wise decision.
+
+--
+- **Forecasts** may result in sizeable forecast errors, which trigger the
+routine learning process.
+
+--
+- **Desirable properties**: changes do not occur too frequently or drastically.
+
+--
+- **_Management by Exception_:** information is process routinely and inferences
+are made, unless exception circumstances arises:
+  1. Expert information anticipate future major changes.
+  2. Performance monitoring identifies deficiencies and prompt some kind of
+  intervention.
+
+--
+- **Presentation scope:** second type of exception, more precisely automatic
+procedure designed to correct specified types of changes.
+
+---
+# Introduction
+
+- A continual assessment of the performance of any forecasting
+and decision system is crucial to its effective use.
+
+- **Model monitoring** refers to the process of:
+  
+  (i) detecting inadequacies in the current model, such as _outliers_ and **abrupt structural changes**, and
+  
+  (ii) providing prompt automatic intervention.
+
+--
+- Areas of application:
+  - **Industrial**: stock control and product planning.
+  - **Environmental**: air pollution.
+  - **Ecology**: population migration.
+
+--
+ 
+- **Bayesian Forecasting and Dynamic Models:** provide effective model structure
+for sequential automatic monitoring and intervention
+`r Cite(myBib, "West1986","West1997")`.
+
+
+
+---
+# Examples: Simulated
+
+- Outlier $(t=20)$, level change $(t=40)$ and growth change $(t=80)$.
+
+```{r sim-data, fig.width=14, fig.height=7}
+set.seed(6669)
+y <- c(rnorm(40, mean = 100, sd = 0.5),
+       rnorm(40, mean = 90, sd = 0.5),
+       0.5 * 1:40 + rnorm(40, mean = 90, sd = 0.3))
+y[20] <- 105
+data_sim <- data.frame(t = seq_along(y), y = y)
+ggplot(data = data_sim, aes(x = t, y = y)) +
+  geom_point(size = 2) +
+  geom_vline(xintercept = c(40, 80), linetype = "dotted", col = "red",
+             size = 1.4) +
+  scale_y_continuous(breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  labs(x = "Time", y = "y")
+```
+
+---
+# Examples: Stored energy
+
+- Monthly stored energy, measured in Gigawatt hours (GWh), in the Southeast
+and Midwest regions of Brazil.
+
+```{r ons, fig.width=16, fig.height=7}
+py$data_ons |> 
+  dplyr::mutate(time = as.Date(time)) |> 
+  ggplot(aes(x = time, y = ear)) +
+  geom_point(size = 2) +
+  geom_vline(xintercept = as.Date(c("2012-02-01", "2016-02-01")),
+             linetype = "dotted", size = 1.4, col = "red") +
+  labs(x = "Time", y = "Stored energy (GWh)") +
+  scale_x_date(breaks = scales::pretty_breaks(10), date_labels = "%b/%Y")
+```
+
+
+
+```{r dlm, child = "01__dlm.Rmd"}
+```
+
+```{r monitor, child = "02__monitoring.Rmd"}
+```
+
+```{r pybats-detection, child = "03__pybats_detection.Rmd"}
+```
+
+```{r examples, child = "04__examples.Rmd"}
+```
+
+---
+class: center, middle, inverse
+
+# Concluding remarks
+
+
+---
+# Concluding remarks
+
+- When real-time estimation is required, Bayesian automatic monitoring is both
+efficient and scalable.
+
+
+--
+- `pybats-detection` provides methods for identifying structural changes and 
+outliers in Bayesian DLMs.
+
+
+--
+- Future versions of the package will include monitoring for other classes of
+dynamic models, such as Dynamic Generalized Linear Models (DGLMs).
+
+
+---
+# References
+```{r refs, results="asis"}
+PrintBibliography(myBib)
+```
+
+---
+class: middle
+background-image: url(config/maynooth.png), url(config/hamilton.png)
+background-size: 200px, 250px
+background-position: 10% 95%, 30% 95%
+font-size: 500px !important
+text-align: left
+vertical-align: middle
+
+# Thanks!
+
+.pull-right[
+
+<a href="andre.berduscomenezes.2023@mumail.ie">
+.black[`r icons::fontawesome("paper-plane")` andre.berduscomenezes.2023@mumail.ie]
+</a>
+
+<a href="http://github.com/andrmenezes">
+.black[`r icons::fontawesome("github")` @AndrMenezes]
+</a>
+
+<a href="https://pypi.org/project/pybats-detection/">
+.black[`r icons::fontawesome("python")` pybats-detection]
+</a>
+
+<br>
+]
+

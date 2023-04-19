@@ -1,0 +1,312 @@
+---
+title: "Examples"
+---
+
+---
+class: center, middle, inverse
+
+# Examples
+
+---
+# Simulated data
+
+- Level change $(t=40)$ and growth change $(t=80)$.
+
+```{r sim-data-viz-2}
+ggplot(data = data_sim, aes(x = t, y = y)) +
+  geom_point(size = 2) +
+  geom_vline(xintercept = c(40, 80), linetype = "dotted", col = "red",
+             size = 1.4) +
+  scale_y_continuous(breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  labs(x = "Time", y = "y")
+```
+
+---
+# The linear growth level model 
+
+The process equations are
+$$
+\begin{eqnarray}
+Y_t &=& \mu_t + \nu_t, \\
+\mu_t &=& \mu_{t-1} + \beta_{t} + \partial\mu_t, \\ 
+\beta_t &=& \beta_{t-1} + \partial\beta_t
+\end{eqnarray}
+$$
+where
+
+- $\mu_t$ is the level of the process at time $t$.
+
+- $\beta_t$ is the incremental growth in the level of the series over time $t-1$ to $t$.
+
+### Discount factors:
+
+- $\delta_T = (0.97, 0.97) \rightarrow \delta^{\prime}_T = (0.10, 0.20)$.
+
+---
+# Using the `Monitoring` class
+
+```{python fit-monitor-simulated,  echo=TRUE}
+from pybats.dglm import dlm
+from pybats_detection.monitor import Monitoring
+a = np.array([100, 0])
+R = np.eye(2)
+R[0, 0] = 100
+R[1, 1] = 100
+mod = dlm(a, R, ntrend=2, deltrend=0.97)
+monitor = Monitoring(mod=mod)
+monitor_results = monitor.fit(
+    y=r.data_sim["y"],
+    h=4, tau=0.135,
+    discount_factors={"trend": [0.10, 0.20]},
+    distr_type="location",
+    bilateral=True,
+    prior_length=10)
+```
+
+```{python fit-no-monitor-simulated, include=FALSE}
+no_monitor_results = monitor.fit(
+    y=r.data_sim["y"],
+    h=10000, tau=0.135,
+    discount_factors={"trend": [0.20, 0.8]},
+    distr_type="location",
+    bilateral=True,
+    prior_length=4)
+
+# Predictive
+df_monitor = monitor_results["filter"]["predictive"].copy()
+df_no_monitor = no_monitor_results["filter"]["predictive"].copy()
+
+cols = ["t", 'with_monitor', 'what_detected', 'y', 'f', 'q', 'ci_lower',
+        'ci_upper']
+df_monitor["with_monitor"] = True
+df_no_monitor["with_monitor"] = False
+df_predictive = pd.concat(
+  [df_monitor[cols], df_no_monitor[cols]]).reset_index(drop=True)
+
+# Posterior
+df_monitor_posterior = monitor_results["filter"]["posterior"].copy()
+df_no_monitor_posterior = no_monitor_results["filter"]["posterior"].copy()
+
+cols = ["t", 'with_monitor', 'parameter', 'mean', 'ci_lower', 'ci_upper']
+df_monitor_posterior["with_monitor"] = True
+df_no_monitor_posterior["with_monitor"] = False
+df_posterior = pd.concat(
+  [df_monitor_posterior[cols],
+   df_no_monitor_posterior[cols]]).reset_index(drop=True)
+# Join to get the data
+df_posterior = df_posterior.merge(
+  r.data_sim, on="t", how="left", validate="many_to_one")
+```
+
+---
+# Predictive
+
+```{r predictive-simulated, warning=FALSE, message=FALSE}
+data_predictive <- py$df_predictive
+with_detection <- data_predictive |> 
+  dplyr::filter(with_monitor, what_detected != "nothing") |> 
+  dplyr::pull(t)
+
+data_predictive <- data_predictive |> 
+  dplyr::mutate(which_shape = what_detected != "nothing" & what_detected != "",
+                which_shape =  t %in% with_detection)
+
+ggplot(data = dplyr::filter(data_predictive, t > 5), aes(x = t, y = y)) +
+  geom_point(data = dplyr::filter(data_predictive, t > 5, with_monitor),
+             aes(shape = which_shape), size = 1.6,  show.legend = FALSE) +
+  geom_line(aes(y = f, col = with_monitor), show.legend = FALSE, size = 1) +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = with_monitor),
+              alpha = 0.2) +
+  scale_shape_manual(values = c(19, 4)) + 
+  scale_color_manual(values = c(red, blue)) + 
+  scale_fill_manual(values = c(red, blue)) + 
+  geom_vline(xintercept = c(40, 80), linetype = "dotted", size = 1.4,
+             col = "red") +
+  scale_y_continuous(breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  labs(col = "With monitor?", fill = "With monitor?")
+
+data_predictive |> 
+  dplyr::filter(t > 10) |> 
+  dplyr::group_by(with_monitor) |> 
+  dplyr::summarise(MAPE = 100*mean(abs((y - f) / y)),
+                   RMSE = sqrt(mean( (y - f)^2)), .groups = "drop") |> 
+  dplyr::rename(Monitor = with_monitor) |> 
+  kableExtra::kbl(digits = 2, caption = "One-step-ahead forecast metrics") |> 
+  kableExtra::kable_styling(bootstrap_options = "striped", font_size = 12,
+                            full_width = FALSE)
+```
+
+---
+# Level
+
+```{r level-simulated, warning=FALSE, message=FALSE}
+py$df_posterior |> 
+  dplyr::filter(parameter == "Intercept", t > 5) |>
+  ggplot(aes(x = t, y = y)) +
+  geom_point() +
+  geom_line(aes(y = mean, col = with_monitor), show.legend = FALSE, size = 1) +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = with_monitor),
+              alpha = 0.2) +
+  scale_color_manual(values = c(red, blue)) + 
+  scale_fill_manual(values = c(red, blue)) + 
+  geom_vline(xintercept = c(40, 80), linetype = "dotted", size = 1.4,
+             col = "red") +
+  scale_y_continuous(breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  labs(col = "With monitor?", fill = "With monitor?")
+```
+
+---
+# Growth
+
+```{r growth-simulated, warning=FALSE, message=FALSE}
+py$df_posterior |> 
+  dplyr::filter(parameter == "Local Slope", t > 5) |>
+  ggplot(aes(x = t, y = mean, col = with_monitor)) +
+  geom_line(show.legend = FALSE, size = 1) +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = with_monitor),
+              alpha = 0.2) +
+  scale_color_manual(values = c(red, blue)) + 
+  scale_fill_manual(values = c(red, blue)) + 
+  geom_vline(xintercept = c(40, 80), linetype = "dotted", size = 1.4,
+             col = "red") +
+  scale_y_continuous(breaks = scales::pretty_breaks(8)) +
+  scale_x_continuous(breaks = scales::pretty_breaks(10)) +
+  labs(col = "With monitor?", fill = "With monitor?")
+```
+
+
+---
+# Stored energy
+
+- Monthly stored energy, measured in Gigawatt hours (GWh), in the Southeast
+and Midwest regions of Brazil.
+
+```{r stored-energy-viz, fig.width=16, fig.height=7}
+py$data_ons |> 
+  dplyr::mutate(time = as.Date(time)) |> 
+  ggplot(aes(x = time, y = ear)) +
+  geom_point(size = 2) +
+  geom_vline(xintercept = as.Date(c("2012-02-01", "2016-02-01")),
+             linetype = "dotted", size = 1.4, col = "red") +
+  labs(x = "Time", y = "Stored energy (GWh)") +
+  scale_x_date(breaks = scales::pretty_breaks(10), date_labels = "%b/%Y")
+```
+
+---
+# The linear growth level model with seasonality
+
+To reflect the month seasonality a two Fourier seasonal component of period 
+$12$ is used. The regression vector and the evolution matrix are defined by
+
+$$\mathbf{F}^\prime_t = (1, 0, 1, 0, 1, 0) \quad \textrm{and} \quad \mathbf{G}_t^{\prime} = \textrm{blockdiag}[\mathbf{G}_{T}, \mathbf{H}_{1}, \mathbf{H}_{2}]$$
+where $\mathbf{G}_{T} = \begin{pmatrix} 1 & 1  \\ 0 & 1  \end{pmatrix}$ and
+
+$$\mathbf{H}_j = \begin{pmatrix}  \cos(2\pi j / 12) & \sin(2\pi j / 12) \\ -\sin(2\pi j / 12) & \cos(2\pi j / 12)  \end{pmatrix}, \quad j = 1,2.$$
+
+### Discount factors:
+- $\delta_T = (0.95, 0.95) \rightarrow \delta^{\prime}_T = (0.30, 0.95)$.
+
+- $\delta_S = 0.98$.
+
+
+---
+# Using the `Monitoring` class
+
+```{python fit-ear, echo=TRUE}
+a = np.array([data_ons["ear"].values[0:4].mean(), 0, 0, 0, 0, 0])
+R = np.eye(6)
+np.fill_diagonal(R, val=100)
+mod = dlm(a0=a, R0=R, ntrend=2, deltrend=[0.95, 0.95], delseas=0.99,
+          seasPeriods=[12], seasHarmComponents=[[1, 2]])
+monitor = Monitoring(mod=mod)
+fit_monitor = monitor.fit(
+    y=data_ons["ear"], bilateral=True, prior_length=40, h=4, tau=0.135,
+    discount_factors={"trend": [0.30, 0.95], "seasonal": 0.99})
+```
+
+
+```{python fit-ear-results, include=FALSE}
+fit_no_monitor = monitor.fit(y=data_ons["ear"], bilateral=True,
+                             prior_length=40, h=100000)
+cols_chosen = [
+    't', 'monitor',  'f', 'q', 'ci_lower', 'ci_upper', 'e', 'df',
+    'H_lower', 'L_lower', 'l_lower', 'H_upper', 'L_upper', 'l_upper',
+    'what_detected']
+
+# Without monitor
+data_predictive_no_monitor = fit_no_monitor.get(
+    "filter").get("predictive").copy()
+
+# With monitor
+data_predictive_monitor = fit_monitor.get("filter").get("predictive").copy()
+
+# Appending results
+data_predictive_no_monitor["monitor"] = False
+data_predictive_monitor["monitor"] = True
+data_predictive = pd.concat(
+    [data_predictive_no_monitor[cols_chosen],
+     data_predictive_monitor[cols_chosen]])
+data_predictive = data_predictive.merge(
+    data_ons, on="t", how="left", validate="many_to_one")
+
+# Smooth Posterior
+data_posterior_no_monitor = fit_no_monitor.get(
+  "smooth").get("posterior").copy()
+data_posterior_no_monitor["monitor"] = False
+data_posterior_monitor = fit_monitor.get("smooth").get("posterior").copy()
+data_posterior_monitor["monitor"] = True
+data_posterior = pd.concat(
+    [data_posterior_no_monitor, data_posterior_monitor])
+data_posterior = data_posterior.merge(
+    data_ons, on="t", how="left", validate="many_to_one")
+
+```
+
+
+---
+# Predictive
+
+```{r predictive-ons-2, warning=FALSE, message=FALSE, fig.width=16, fig.height=8}
+data_predictive <- py$data_predictive
+with_detection <- data_predictive |> 
+  dplyr::filter(monitor, what_detected != "nothing") |> 
+  dplyr::pull(t)
+
+data_predictive <- data_predictive |> 
+  dplyr::mutate(which_shape = what_detected != "nothing" & what_detected != "",
+                which_shape =  t %in% with_detection,
+                time = as.Date(time))
+
+ggplot(data = dplyr::filter(data_predictive, t > 5), aes(x = time, y = ear)) +
+  geom_point(data = dplyr::filter(data_predictive, t > 5),
+             aes(shape = which_shape), size = 1.6,  show.legend = FALSE) +
+  facet_wrap(~monitor, ncol = 1) +
+  geom_line(aes(y = f, col = monitor), show.legend = FALSE, size = 1) +
+  geom_ribbon(aes(ymin = ci_lower, ymax = ci_upper, fill = monitor),
+              alpha = 0.2) +
+  scale_shape_manual(values = c(19, 4)) + 
+  scale_color_manual(values = c(red, blue)) + 
+  scale_fill_manual(values = c(red, blue)) + 
+  geom_vline(xintercept = as.Date(c("2012-02-01", "2016-02-01")),
+             linetype = "dotted", size = 1.4, col = "red") +
+  scale_y_continuous(breaks = scales::pretty_breaks(6)) +
+  scale_x_date(breaks = scales::pretty_breaks(10), date_labels = "%b/%Y") +
+  labs(x = "Time", y = "Stored energy (GWh)", col = "With monitor?",
+       fill = "With monitor?")
+
+data_predictive |> 
+  dplyr::filter(t > 10) |> 
+  dplyr::group_by(monitor) |> 
+  dplyr::summarise(MAPE = 100*mean(abs((ear - f) / ear)),
+                   RMSE = sqrt(mean( (ear - f)^2))) |>
+  dplyr::rename(Monitor = monitor) |> 
+  kableExtra::kbl(digits = 2, caption = "One-step-ahead forecast metrics") |> 
+  kableExtra::kable_styling(bootstrap_options = "striped", font_size = 12,
+                            full_width = FALSE)
+```
+
+
+
