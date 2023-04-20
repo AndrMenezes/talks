@@ -33,8 +33,8 @@ $$(Y_i \mid \mathbf{x}_i) \sim \mathcal{F}[\mu_i, \phi; \tau], \quad
 
 --
 
-- For instance, `r Citet(myBib, "Mazucheli2020")` introduced the following distribution. If $X \sim \textrm{Weibull}(\alpha, \phi)$, then 
-$$Y = \textrm{e}^{-X} \sim \textrm{unit-Weibull}(\alpha, \phi)$$
+- For instance, `r Citet(myBib, "Mazucheli2020")` introduced the following distribution. If $X \sim \textrm{Weibull}[\alpha, \phi]$, then 
+$$Y = \textrm{e}^{-X} \sim \textrm{unit-Weibull}[\alpha, \phi]$$
 where its c.d.f. is given by
 
 $$

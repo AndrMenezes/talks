@@ -4,7 +4,7 @@
     <title>Quantile Regression</title>
     <meta charset="utf-8" />
     <meta name="author" content="André F. B. Menezes" />
-    <meta name="date" content="2023-04-19" />
+    <meta name="date" content="2023-04-20" />
     <script src="index_files/header-attrs-2.17/header-attrs.js"></script>
     <link href="index_files/remark-css-0.0.1/default.css" rel="stylesheet" />
     <link href="index_files/tachyons-4.12.0/tachyons.min.css" rel="stylesheet" />
@@ -22,7 +22,7 @@ class: center, middle, inverse, title-slide
 ### André F. B. Menezes
 ]
 .date[
-### April 19, 2023
+### April 20, 2023
 ]
 
 ---
@@ -63,7 +63,7 @@ as extensions of the linear regression model.
 Just as the mean gives an incomplete picture of a single distribution, so the
 regression curve gives a correspondingly incomplete picture for a set of
 distributions.
-.right[-- &lt;cite&gt;&lt;a name=cite-Mosteller1977&gt;&lt;/a&gt;[Mosteller and Tukey (1977)](#bib-Mosteller1977)&lt;/cite&gt;]
+.right[-- &lt;cite&gt;[Mosteller and Tukey (1977)](#bib-Mosteller1977)&lt;/cite&gt;]
 &lt;/blockquote&gt;
 
 --
@@ -77,7 +77,7 @@ distributions.
 
 - Brazil has always been considered a country rich in water.
 
-- About `\(12%\)` of the world's surface water resources are located in Brazil.
+- About `\(12\%\)` of the world's surface water resources are located in Brazil.
 
 - However, there are still deep inequalities in access to water and sanitation
 among Brazil regions.
@@ -179,7 +179,7 @@ where `\(I(\cdot)\)` denotes the indicator function.
 ---
 # Quantile regression
 
-- &lt;a name=cite-Koenker1978&gt;&lt;/a&gt;[Koenker and Bassett (1978)](#bib-Koenker1978) proposed the quantile regression model as
+- [Koenker and Bassett (1978)](#bib-Koenker1978) proposed the quantile regression model as
 follows:
 
 $$
@@ -206,7 +206,7 @@ coefficients by minimization of the function:
 # Bayesian paradigm
 
 - The asymmetric Laplace (AL) distribution is used to introduce the Bayesian paradigm 
-&lt;a name=cite-Yu2001&gt;&lt;/a&gt;([Yu and Moyeed, 2001](#bib-Yu2001)). Its p.d.f is given by
+([Yu and Moyeed, 2001](#bib-Yu2001)). Its p.d.f is given by
 
 `$$f(y \mid \mu, \sigma, \tau) = \dfrac{\tau (1 - \tau)}{\sigma}\,\exp\left\{-\rho_\tau\left(\dfrac{y - \mu}{\sigma} \right)\right\}$$`
 
@@ -216,26 +216,26 @@ where `\(\mu \in \mathbb{R}\)` is the location parameter corresponding to the
 
 --
 
-- In the regression framework we have: `\((Y_i \mid \mathbf{x}_i) \sim \textrm{AL}(\mu_i, \sigma; \tau)\)`.
+- In the regression framework we have: `\((Y_i \mid \mathbf{x}_i) \sim \textrm{AL}[\mu_i, \sigma; \tau]\)`.
 
-- Assuming that `\(\mu_i = \boldsymbol{x}_i^\top \boldsymbol{\beta}(\tau)\)` for a given 
+- Assuming that `\(\mu_i = \mathbf{x}_i^\top \boldsymbol{\beta}(\tau)\)` for a given 
 quantile `\(\tau \in (0,1)\)`.
 
 
 ---
 # Bayesian paradigm
 
-- &lt;a name=cite-Kozumi2011&gt;&lt;/a&gt;[Kozumi and Kobayashi (2011)](#bib-Kozumi2011) proposed the following a mixture representation of AL
-distribution:
-
+- [Kozumi and Kobayashi (2011)](#bib-Kozumi2011) proposed the following a mixture
+representation of AL distribution:
 `\begin{eqnarray}
-(Y \mid \nu) &amp;\sim&amp; N(\mu + \theta\,\nu, \varphi^2\,\sigma\,\nu) \\
-\nu &amp;\sim&amp; \mathrm{Exp}(\sigma)
+(Y \mid \nu) &amp;\sim&amp; N[\mu + \theta\,\nu, \varphi^2\,\sigma\,\nu] \\
+\nu &amp;\sim&amp; \mathrm{Exp}[\sigma]
 \end{eqnarray}`
 
-where `\(\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}\)` e `\(\varphi^2=\dfrac{2}{\tau (1 - \tau)}\)`.
+where `\(\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}\)` and
+`\(\varphi^2=\dfrac{2}{\tau (1 - \tau)}\)`.
 
-- The marginal distribution of `\(Y\)` is `\(\textrm{AL}(\mu, \sigma; \tau)\)`
+- The marginal distribution of `\(Y\)` is `\(\textrm{AL}[\mu, \sigma; \tau]\)`
 
 
 
@@ -266,7 +266,7 @@ values of covariate vector.
 - `\(\phi\)` is scale/shape parameter.
 - `\(g(\cdot)\)` is an appropriate link function that maps `\(\mu_i \in (0, 1)\)` to the real line. Common choices are: `logit`, `probit` and `cauchit`.
 
-- A full up-to-date overview of parametric quantile regression is presented in &lt;a name=cite-Mazucheli2022&gt;&lt;/a&gt;[Mazucheli, Alves, Menezes, and Leiva (2022)](#bib-Mazucheli2022).
+- A full up-to-date overview of parametric quantile regression is presented in [Mazucheli, Alves, Menezes et al. (2022)](#bib-Mazucheli2022).
 
 ---
 # Families of distributions on `\((0, 1)\)`
@@ -275,8 +275,8 @@ values of covariate vector.
 
 --
 
-- For instance, &lt;a name=cite-Mazucheli2020&gt;&lt;/a&gt;[Mazucheli, Menezes, Fernandes, Oliveira, and Ghitany (2020)](#bib-Mazucheli2020) introduced the following distribution. If `\(X \sim \textrm{Weibull}(\alpha, \phi)\)`, then 
-`$$Y = \textrm{e}^{-X} \sim \textrm{unit-Weibull}(\alpha, \phi)$$`
+- For instance, [Mazucheli, Menezes, Fernandes et al. (2020)](#bib-Mazucheli2020) introduced the following distribution. If `\(X \sim \textrm{Weibull}[\alpha, \phi]\)`, then 
+`$$Y = \textrm{e}^{-X} \sim \textrm{unit-Weibull}[\alpha, \phi]$$`
 where its c.d.f. is given by
 
 $$
@@ -491,16 +491,34 @@ class: center, middle, inverse
 - The `unitquantreg` R package provides a fully parametric approach for modelling bounded responses variables using quantile regression.
 
 --
-- **Extension**: Dynamic Quantile Linear Model
+- **Extension I**: Dynamic Quantile Linear Model.
 
 `\begin{eqnarray}
-(Y_t \mid \boldsymbol{\theta}_t, \phi, \tau) &amp;\sim&amp; \textrm{LA}(\mathbf{F}_t^\top \boldsymbol{\theta}_t, \phi^{-1/2}, \tau) \\
-(\boldsymbol{\theta}_t \mid \boldsymbol{\theta}_{t-1}) &amp;\sim&amp; \textrm{N}(\mathbf{G}_t \boldsymbol{\theta}_t, \mathbf{W}_t)
+(Y_t \mid \boldsymbol{\theta}_t, \phi, \tau) &amp;\sim&amp; \textrm{LA}\left[\mathbf{F}_t^\top \boldsymbol{\theta}_t, \phi^{-1/2}, \tau\right] \\
+(\boldsymbol{\theta}_t \mid \boldsymbol{\theta}_{t-1}) &amp;\sim&amp; \textrm{N}\left[\mathbf{G}_t \boldsymbol{\theta}_t, \mathbf{W}_t\right].
 \end{eqnarray}`
 
-- &lt;a name=cite-Goncalves2020&gt;&lt;/a&gt;[Gonçalves, Migon, and Bastos (2020)](#bib-Goncalves2020) used MCMC to perform inference.
+- [Gonçalves, Migon, and Bastos (2020)](#bib-Goncalves2020) used MCMC to perform inference.
 
-- &lt;a name=cite-Barata2022&gt;&lt;/a&gt;[Barata, Prado, and Sansó (2022)](#bib-Barata2022) explored the mixture representation and proposed a Importance Sampling variational Bayes method.
+- [Barata, Prado, and Sansó (2022)](#bib-Barata2022) explored the mixture representation and proposed a Importance Sampling variational Bayes method.
+
+
+---
+# Final comments
+
+- **Extension II**: Bayesian Quantile Additive Regression Trees ([Kindo, Wang, Hanson et al., 2016](#bib-Kindo2016)).
+
+`\begin{eqnarray}
+(Y_i \mid \mathbf{x}_i, \phi, \tau) &amp;\sim&amp; \textrm{N}\left[
+\sum_{j=1}^m\,g\left(\mathbf{x}_i;M_j, T_j\right) +
+\theta\,\nu, \varphi^2\,\sigma\,\nu\right] \\
+\nu &amp;\sim&amp; \mathrm{Exp}[\sigma]
+\end{eqnarray}`
+where `\(g(\cdot)\)` is a function that assigns a predicted values based on
+`\(T_j\)` and `\(M_j\)`, which are the `\(j\)`th tree in the sum and its associated 
+terminal nodes parameters, 
+`\(\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}\)` and `\(\varphi^2=\dfrac{2}{\tau (1 - \tau)}\)`.
+
 
 ---
 # References
@@ -513,6 +531,9 @@ characterization of atmospheric rivers". In: _The Annals of Applied Statistics_ 
 (2020). "Dynamic Quantile Linear Models: A Bayesian Approach". In: _Bayesian Analysis_ 15.2, pp.
 335-362.
 
+&lt;a name=bib-Kindo2016&gt;&lt;/a&gt;[Kindo, B. P., H. Wang, T. Hanson, et al.](#cite-Kindo2016) (2016). _Bayesian
+quantile additive regression trees_. arXiv: 1607.02676 [stat.ML].
+
 &lt;a name=bib-Koenker1978&gt;&lt;/a&gt;[Koenker, R. and G. Bassett](#cite-Koenker1978) (1978). "Regression
 Quantiles". In: _Econometrica_ 46.1, pp. 33-50.
 
@@ -520,6 +541,8 @@ Quantiles". In: _Econometrica_ 46.1, pp. 33-50.
 methods for Bayesian quantile regression". In: _Journal of Statistical Computation and Simulation_
 81.11, pp. 1565-1578.
 
+---
+# References
 &lt;a name=bib-Mazucheli2022&gt;&lt;/a&gt;[Mazucheli, J., B. Alves, A. F. B. Menezes, et al.](#cite-Mazucheli2022)
 (2022). "An overview on parametric quantile regression models and their computational implementation
 with applications to biomedical problems including COVID-19 data". In: _Computer Methods and Programs in

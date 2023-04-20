@@ -120,25 +120,25 @@ $\tau$-th quantile, $\tau \in (0,1)$, and e $\sigma>0$ is a scale parameter.
 
 --
 
-- In the regression framework we have: $(Y_i \mid \mathbf{x}_i) \sim \textrm{AL}(\mu_i, \sigma; \tau)$.
+- In the regression framework we have: $(Y_i \mid \mathbf{x}_i) \sim \textrm{AL}[\mu_i, \sigma; \tau]$.
 
-- Assuming that $\mu_i = \boldsymbol{x}_i^\top \boldsymbol{\beta}(\tau)$ for a given 
+- Assuming that $\mu_i = \mathbf{x}_i^\top \boldsymbol{\beta}(\tau)$ for a given 
 quantile $\tau \in (0,1)$.
 
 
 ---
 # Bayesian paradigm
 
-- `r Citet(myBib, "Kozumi2011")` proposed the following a mixture representation of AL
-distribution:
-
+- `r Citet(myBib, "Kozumi2011")` proposed the following a mixture
+representation of AL distribution:
 \begin{eqnarray}
-(Y \mid \nu) &\sim& N(\mu + \theta\,\nu, \varphi^2\,\sigma\,\nu) \\
-\nu &\sim& \mathrm{Exp}(\sigma)
+(Y \mid \nu) &\sim& N[\mu + \theta\,\nu, \varphi^2\,\sigma\,\nu] \\
+\nu &\sim& \mathrm{Exp}[\sigma]
 \end{eqnarray}
 
-where $\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}$ e $\varphi^2=\dfrac{2}{\tau (1 - \tau)}$.
+where $\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}$ and
+$\varphi^2=\dfrac{2}{\tau (1 - \tau)}$.
 
-- The marginal distribution of $Y$ is $\textrm{AL}(\mu, \sigma; \tau)$
+- The marginal distribution of $Y$ is $\textrm{AL}[\mu, \sigma; \tau]$
 
 

@@ -80,21 +80,45 @@ class: center, middle, inverse
 - The `unitquantreg` R package provides a fully parametric approach for modelling bounded responses variables using quantile regression.
 
 --
-- **Extension**: Dynamic Quantile Linear Model
+- **Extension I**: Dynamic Quantile Linear Model.
 
 \begin{eqnarray}
-(Y_t \mid \boldsymbol{\theta}_t, \phi, \tau) &\sim& \textrm{LA}(\mathbf{F}_t^\top \boldsymbol{\theta}_t, \phi^{-1/2}, \tau) \\
-(\boldsymbol{\theta}_t \mid \boldsymbol{\theta}_{t-1}) &\sim& \textrm{N}(\mathbf{G}_t \boldsymbol{\theta}_t, \mathbf{W}_t)
+(Y_t \mid \boldsymbol{\theta}_t, \phi, \tau) &\sim& \textrm{LA}\left[\mathbf{F}_t^\top \boldsymbol{\theta}_t, \phi^{-1/2}, \tau\right] \\
+(\boldsymbol{\theta}_t \mid \boldsymbol{\theta}_{t-1}) &\sim& \textrm{N}\left[\mathbf{G}_t \boldsymbol{\theta}_t, \mathbf{W}_t\right].
 \end{eqnarray}
 
 - `r Citet(myBib, "Goncalves2020")` used MCMC to perform inference.
 
 - `r Citet(myBib, "Barata2022")` explored the mixture representation and proposed a Importance Sampling variational Bayes method.
 
+
+---
+# Final comments
+
+- **Extension II**: Bayesian Quantile Additive Regression Trees `r Cite(myBib, "Kindo2016")`.
+
+\begin{eqnarray}
+(Y_i \mid \mathbf{x}_i, \phi, \tau) &\sim& \textrm{N}\left[
+\sum_{j=1}^m\,g\left(\mathbf{x}_i;M_j, T_j\right) +
+\theta\,\nu, \varphi^2\,\sigma\,\nu\right] \\
+\nu &\sim& \mathrm{Exp}[\sigma]
+\end{eqnarray}
+where $g(\cdot)$ is a function that assigns a predicted values based on
+$T_j$ and $M_j$, which are the $j$th tree in the sum and its associated 
+terminal nodes parameters, 
+$\theta = \dfrac{1 - 2 \tau}{\tau (1 - \tau)}$ and $\varphi^2=\dfrac{2}{\tau (1 - \tau)}$.
+
+
 ---
 # References
 ```{r refs, results="asis"}
-PrintBibliography(myBib)
+PrintBibliography(myBib, start = 1, end = 5)
+```
+
+---
+# References
+```{r refs-2, results="asis"}
+PrintBibliography(myBib, start = 6, end = 9)
 ```
 
 ---
